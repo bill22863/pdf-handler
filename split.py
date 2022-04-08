@@ -10,7 +10,7 @@ import re
 
 # 全域變數
 # input_path = "pdf/11102-受試者編號.pdf"
-input_path = "pdf/11102-受試者編號-測試2.pdf"
+input_path = "pdf/11102-受試者編號-測試.pdf"
 output_root_path = "split-pdf/"
 
 
@@ -26,6 +26,13 @@ def regex_match(context, pattern):
 
 def contain_substr(origin , sub):
     return sub in origin
+
+# 存檔
+def save_file(dest: str , writer: PdfFileWriter) -> None:
+    with open(dest , 'wb') as out :
+        writer.write(out)
+    return None
+    
 
 def split_pdf(src, dest):
     page_list = []
@@ -86,8 +93,15 @@ def split_pdf(src, dest):
                     
                     new_file_dest = f'{dest}{prev_file_name}'
                     # 產生分割後的新檔案
-                    with open(new_file_dest , 'wb') as out :
-                        pdf_writer.write(out)
+                    save_file(new_file_dest, pdf_writer)
+                        
+                    #測試另外多寫一份檔案到不同位置
+# =============================================================================
+#                     output_copy_path = "split-merge/"
+#                     new_file_dest_copy = f'{output_copy_path}{prev_file_name}'
+#                     with open(new_file_dest_copy, 'wb') as copy_out:
+#                         pdf_writer.write(copy_out)
+# =============================================================================
                     
                     # 清空 page 列表
                     page_list.clear();
@@ -108,8 +122,11 @@ def split_pdf(src, dest):
             
             new_file_dest = f'{dest}{prev_file_name}'
             # 產生分割後的新檔案
-            with open(new_file_dest , 'wb') as out :
-                pdf_writer.write(out)
+            save_file(new_file_dest, pdf_writer)
+# =============================================================================
+#             with open(new_file_dest , 'wb') as out :
+#                 pdf_writer.write(out)
+# =============================================================================
         
     # 用來檢查檔案已確實關閉
     # print(pdf.pages[0].extract_text())
