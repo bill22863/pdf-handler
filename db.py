@@ -29,7 +29,16 @@ try:
         " or Info_Name_Ch like '%阿斯特捷利康%') ) as b on sc.Manu_Name = b.Info_Id " \
         
         df = pd.read_sql(query, connection);
-        print("query finish.")
+        
+        # check specific value in data frame.
+        irb = 'AB-CR-999-030'
+        # irb = 'AB-CR-110-072'
+        if irb in df.values:
+            vendor = df.loc[df.IRB_No == irb , 'spon'].values[0]
+        else:
+            print("分類至其他")
+            
+        
         
 except Error as e:
     print("Error while connecting to MySQL", e)
