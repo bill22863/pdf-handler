@@ -4,37 +4,36 @@ Created on Tue Mar 22 17:18:15 2022
 
 @author: Bill
 """
+from util.file_util import FileUtil
+from util.str_util import StringUtil
 from PyPDF2 import PdfFileWriter, PdfFileReader
 import pdfplumber
-import re
+
 
 # 全域變數
 # input_path = "pdf/11102-受試者編號.pdf"
 input_path = "pdf/11102-受試者編號-測試.pdf"
 output_root_path = "split-pdf/"
+network_drive_path = r"\\172.19.61.159\月報表明細"
+sub_history_dir = "歷年資料"
+sub_spon_dir = "廠商分類"
 
 
-def regex_match(context, pattern):
-    result = 'unknown'
-    regexPattern = re.compile(r'{}'.format(pattern))
-    mo = regexPattern.search(context)
-    try:        
-        result = mo.group()
-    except:
-        result = 'unknown'
+def get_sponsor_from_df(irb_no , df):
+    result = None
+    if irb_no in df.values:
+        result = df.loc[df.IRB_No == irb_no , 'spon'].values[0]
+        
+    if StringUtil.has_substr(result, '阿斯特捷利康') or StringUtil.has_substr(result, 'AstraZeneca'):
+        result = 'AZ'
+    elif StringUtil.has_substr(result, '默沙東'):
+        result = 'MSD'
+    else:
+        result = 'Other'        
     return result
 
-def contain_substr(origin , sub):
-    return sub in origin
 
-# 存檔
-def save_file(dest: str , writer: PdfFileWriter) -> None:
-    with open(dest , 'wb') as out :
-        writer.write(out)
-    return None
-    
-
-def split_pdf(src, dest):
+def split_pdf(src, dest, df):
     page_list = []
     
     #開啟pdf 檔案
@@ -43,12 +42,9 @@ def split_pdf(src, dest):
         # 區域變數
         pages = pdf.getNumPages()
         plumber_pdf = pdfplumber.open(f)
-        # need_merge = False
         
         # 輸出的檔名
         prev_file_name = 'unknown.pdf'
-        # 下一頁
-        next_page = 0
         
         for page in range(pages):
             # 建立PdfFileWriter 物件
@@ -60,7 +56,7 @@ def split_pdf(src, dest):
             # regex 規則
             regex = '\d{4}/\d{2}/\d{2}'
             # 日期資訊            
-            date_context = regex_match(cur_page_context_ary[4], regex)
+            date_context = StringUtil.regex_match(cur_page_context_ary[4], regex)
             # 年、月資訊
             year = date_context.split('/')[0]
             month = date_context.split('/')[1]
@@ -68,19 +64,28 @@ def split_pdf(src, dest):
             # 廠商代碼、IRB、PI資訊在索引5
             manu_context = cur_page_context_ary[5]
             # 檢查當前頁是否含有廠商代碼字樣
-            has_manu = contain_substr(manu_context, '廠商代碼')
+            has_manu = StringUtil.has_substr(manu_context, '廠商代碼')
+            
+            # 建立資料夾存放歷年資料
+            # 路徑: \\172.19.61.159\月報表明細\歷年資料\2022_02\
+            FileUtil.create_dir(dest, sub_history_dir, f'{year}_{month}')
             
             #有廠商代碼
             if has_manu:    
                 # 廠商代碼
                 regex = '[A-Za-z]{1}\d{3}'
-                manu = regex_match(manu_context, regex)
+                manu = StringUtil.regex_match(manu_context, regex)
                 # IRB 編號
                 regex = '[A-Z]+-[A-Z0-9]+-\d+-?\d*-?[A-Za-z]*'
-                irb = regex_match(manu_context, regex)
+                irb = StringUtil.regex_match(manu_context, regex)
                 # PI
                 regex = '[^A-Za-z0-9\-\：]{5,6}'
-                pi = regex_match(manu_context, regex)
+                pi = StringUtil.regex_match(manu_context, regex)
+                
+                # 根據IRB編號取得廠商名稱
+                sponsor = get_sponsor_from_df(irb, df)
+                # 建立資料夾依照廠商名稱分類
+                FileUtil.create_dir(dest, sub_spon_dir, f'{year}_{month}', f'{sponsor}')
                 
                 # 分割後的新檔名: year_month_irb_pi.pdf
                 file_name = f'{year}_{month}_{manu}_{irb}_{pi}.pdf'
@@ -93,7 +98,7 @@ def split_pdf(src, dest):
                     
                     new_file_dest = f'{dest}{prev_file_name}'
                     # 產生分割後的新檔案
-                    save_file(new_file_dest, pdf_writer)
+                    FileUtil.save_pdf(new_file_dest, pdf_writer)
                         
                     #測試另外多寫一份檔案到不同位置
 # =============================================================================
@@ -122,15 +127,14 @@ def split_pdf(src, dest):
             
             new_file_dest = f'{dest}{prev_file_name}'
             # 產生分割後的新檔案
-            save_file(new_file_dest, pdf_writer)
-# =============================================================================
-#             with open(new_file_dest , 'wb') as out :
-#                 pdf_writer.write(out)
-# =============================================================================
+            FileUtil.save_pdf(new_file_dest, pdf_writer)
+
         
     # 用來檢查檔案已確實關閉
     # print(pdf.pages[0].extract_text())
 
 
 if __name__ == '__main__':
-    split_pdf(input_path, output_root_path)        
+    # 建立資料夾存放歷年資料
+    # create_dir(network_drive_path , sub_history_dir , f'{m}月', '默沙東')
+    split_pdf(input_path, network_drive_path)        

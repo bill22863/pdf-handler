@@ -32,9 +32,6 @@ class Main:
     
     def split_pdf(self):
         print("split pdf")
-        
-    def rename_pdf(self):
-        print("rename pdf")
     
     def main(self):
         self.gen_pdf()
