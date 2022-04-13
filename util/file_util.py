@@ -10,23 +10,30 @@ from PyPDF2 import PdfFileWriter, PdfFileReader
 
 class FileUtil:
     
-    # 建立資料夾
     @staticmethod
-    def create_dir(root_path, *args):
+    def get_path_str(p):
+        return str(p)
+    
+    @staticmethod
+    def get_path(root_path, *args):
         path = Path(root_path)
-
         # 新建資料夾路徑
         for p in args:
             path = path / p
         
         print(f"file path: {path}")
-        
+        return path
+    
+    # 建立資料夾
+    @staticmethod
+    def create_dir(path):        
         try:    
             path.mkdir(parents=True, exist_ok=True)
         except FileExistsError:
             print("Folder is already there")
         else:
             print("Folder was created")
+        return path
     
     # 存檔
     @staticmethod

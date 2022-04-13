@@ -8,11 +8,12 @@ from util.file_util import FileUtil
 from util.str_util import StringUtil
 from PyPDF2 import PdfFileWriter, PdfFileReader
 import pdfplumber
+from entity.db import DataBase
 
 
 # 全域變數
 # input_path = "pdf/11102-受試者編號.pdf"
-input_path = "pdf/11102-受試者編號-測試.pdf"
+input_path = "pdf/11103-受試者編號.pdf"
 output_root_path = "split-pdf/"
 network_drive_path = r"\\172.19.61.159\月報表明細"
 sub_history_dir = "歷年資料"
@@ -24,17 +25,18 @@ def get_sponsor_from_df(irb_no , df):
     if irb_no in df.values:
         result = df.loc[df.IRB_No == irb_no , 'spon'].values[0]
         
-    if StringUtil.has_substr(result, '阿斯特捷利康') or StringUtil.has_substr(result, 'AstraZeneca'):
-        result = 'AZ'
-    elif StringUtil.has_substr(result, '默沙東'):
-        result = 'MSD'
-    else:
-        result = 'Other'        
+        if StringUtil.has_substr(result, '阿斯特捷利康') or StringUtil.has_substr(result, 'AstraZeneca'):
+            result = 'AZ'
+        elif StringUtil.has_substr(result, '默沙東'):
+            result = 'MSD'
+        else:
+            result = 'Other'        
     return result
 
 
 def split_pdf(src, dest, df):
     page_list = []
+    spon_list = []
     
     #開啟pdf 檔案
     with open(src , 'rb') as f:        
@@ -43,8 +45,10 @@ def split_pdf(src, dest, df):
         pages = pdf.getNumPages()
         plumber_pdf = pdfplumber.open(f)
         
-        # 輸出的檔名
+        # 歷年資料的預設檔名
         prev_file_name = 'unknown.pdf'
+        # 廠商分類的預設廠商名
+        prev_spon = 'unknown'
         
         for page in range(pages):
             # 建立PdfFileWriter 物件
@@ -66,9 +70,11 @@ def split_pdf(src, dest, df):
             # 檢查當前頁是否含有廠商代碼字樣
             has_manu = StringUtil.has_substr(manu_context, '廠商代碼')
             
-            # 建立資料夾存放歷年資料
             # 路徑: \\172.19.61.159\月報表明細\歷年資料\2022_02\
-            FileUtil.create_dir(dest, sub_history_dir, f'{year}_{month}')
+            history_path = FileUtil.get_path(dest, sub_history_dir, f'{year}_{month}')
+            # 建立資料夾存放歷年資料
+            FileUtil.create_dir(history_path)
+            history_path_str = FileUtil.get_path_str(history_path)
             
             #有廠商代碼
             if has_manu:    
@@ -84,11 +90,11 @@ def split_pdf(src, dest, df):
                 
                 # 根據IRB編號取得廠商名稱
                 sponsor = get_sponsor_from_df(irb, df)
-                # 建立資料夾依照廠商名稱分類
-                FileUtil.create_dir(dest, sub_spon_dir, f'{year}_{month}', f'{sponsor}')
-                
+                                
                 # 分割後的新檔名: year_month_irb_pi.pdf
                 file_name = f'{year}_{month}_{manu}_{irb}_{pi}.pdf'
+                # 廠商分類的路徑
+                
                 
                 # 先輸出前面的頁面內容
                 if len(page_list) > 0:
@@ -96,11 +102,32 @@ def split_pdf(src, dest, df):
                     for i in page_list:
                         pdf_writer.addPage(pdf.getPage(i))                                        
                     
-                    new_file_dest = f'{dest}{prev_file_name}'
+                    
+                    # new_file_dest = f'{dest}{prev_file_name}'
+                    # new_file_dest = f'{history_path_str}{prev_file_name}'
+                    
+                    new_file_dest = FileUtil.get_path_str(
+                        FileUtil.get_path(history_path_str, prev_file_name))
+                    
                     # 產生分割後的新檔案
                     FileUtil.save_pdf(new_file_dest, pdf_writer)
                         
-                    #測試另外多寫一份檔案到不同位置
+                    # 若屬於委託中心且需月報表之案件多寫一份檔案到不同位置
+                    if len(spon_list) > 0:
+                        # 建立資料夾依照廠商名稱分類
+                        sp = spon_list[0]
+                        spon_path = FileUtil.get_path(dest, sub_spon_dir, f'{year}_{month}', f'{sp}')
+                        FileUtil.create_dir(spon_path)
+                        spon_path_str = FileUtil.get_path_str(spon_path)
+                        
+                        new_spon_file_dest = FileUtil.get_path_str(
+                            FileUtil.get_path(spon_path_str, prev_file_name))
+                        
+                        # 產生分割後的新檔案
+                        FileUtil.save_pdf(new_spon_file_dest, pdf_writer)
+                        
+                        # 清空廠商列表
+                        spon_list.clear()
 # =============================================================================
 #                     output_copy_path = "split-merge/"
 #                     new_file_dest_copy = f'{output_copy_path}{prev_file_name}'
@@ -109,25 +136,50 @@ def split_pdf(src, dest, df):
 # =============================================================================
                     
                     # 清空 page 列表
-                    page_list.clear();
+                    page_list.clear()
                     page_list.append(page)
+                    
                 else:
                     page_list.append(page)
+                                                                            
             else:
                 # 內容跨頁
                 page_list.append(page)
                 
             prev_file_name = file_name
+            
+            # 屬於委託中心且需月報表之案件儲存廠商名
+            if sponsor is not None:
+                spon_list.append(sponsor)
+        
         
         # 檢查頁面清單是否還有未輸出的內容
         if len(page_list) > 0:
-            
             for i in page_list:
                 pdf_writer.addPage(pdf.getPage(i))                                        
             
-            new_file_dest = f'{dest}{prev_file_name}'
+            # new_file_dest = f'{dest}{prev_file_name}'
+            new_file_dest = FileUtil.get_path_str(
+                FileUtil.get_path(history_path_str, prev_file_name))
+            
             # 產生分割後的新檔案
             FileUtil.save_pdf(new_file_dest, pdf_writer)
+            
+            if len(spon_list) > 0:
+                # 建立資料夾依照廠商名稱分類
+                sp = spon_list[0]
+                spon_path = FileUtil.get_path(dest, sub_spon_dir, f'{year}_{month}', f'{sp}')
+                FileUtil.create_dir(spon_path)
+                spon_path_str = FileUtil.get_path_str(spon_path)
+                
+                new_spon_file_dest = FileUtil.get_path_str(
+                    FileUtil.get_path(spon_path_str, prev_file_name))
+                
+                # 產生分割後的新檔案
+                FileUtil.save_pdf(new_spon_file_dest, pdf_writer)
+                    
+        # 清空 page 列表
+        page_list.clear()
 
         
     # 用來檢查檔案已確實關閉
@@ -136,5 +188,13 @@ def split_pdf(src, dest, df):
 
 if __name__ == '__main__':
     # 建立資料夾存放歷年資料
-    # create_dir(network_drive_path , sub_history_dir , f'{m}月', '默沙東')
-    split_pdf(input_path, network_drive_path)        
+    # m = 3
+    # path_obj = FileUtil.get_path(network_drive_path , sub_history_dir , f'{m}月', '默沙東')    
+    # path = FileUtil.get_path_str(path_obj)
+    # paht2 = path_obj.resolve()
+    # print(path)
+    
+    database = DataBase()
+    sponsors = database.query()
+    
+    split_pdf(input_path, network_drive_path, sponsors)        
