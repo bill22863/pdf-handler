@@ -14,7 +14,7 @@ class DataBase:
     connection_config_dict = {
         'user': 'ctc_contract',
         'password': 'CTC@contract@6023',
-        'host': 'localhost',
+        'host': '172.19.61.158',
         'database': 'contractmanagement',
         'port': 3310
     }

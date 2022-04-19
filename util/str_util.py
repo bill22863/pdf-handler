@@ -14,11 +14,12 @@ class StringUtil:
         result = 'unknown'
         regexPattern = re.compile(r'{}'.format(pattern))
         mo = regexPattern.search(context)
-        try:        
-            result = mo.group()
-        except Exception as ex:
-            print(f"正則比對過程發生錯誤:{ex}")
-            result = 'unknown'
+        if mo is not None:
+            try:        
+                result = mo.group()
+            except Exception as ex:
+                #print(f"正則比對過程發生錯誤:{ex}")
+                result = 'unknown'
         return result
     
     # 檢查子字串是否包含在原始字串中

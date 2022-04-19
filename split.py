@@ -12,14 +12,15 @@ from entity.db import DataBase
 
 
 # 全域變數
-# input_path = "pdf/11102-受試者編號.pdf"
-input_path = "pdf/11103-受試者編號.pdf"
+input_path = "pdf/11102-受試者編號.pdf"
+# input_path = "pdf/11102-受試者編號-測試2.pdf"
 output_root_path = "split-pdf/"
 network_drive_path = r"\\172.19.61.159\月報表明細"
 sub_history_dir = "歷年資料"
 sub_spon_dir = "廠商分類"
 
 
+# 根據IRB編號取得廠商名稱
 def get_sponsor_from_df(irb_no , df):
     result = None
     if irb_no in df.values:
@@ -46,9 +47,11 @@ def split_pdf(src, dest, df):
         plumber_pdf = pdfplumber.open(f)
         
         # 歷年資料的預設檔名
-        prev_file_name = 'unknown.pdf'
+        prev_file_name = 'none.pdf'
         # 廠商分類的預設廠商名
-        prev_spon = 'unknown'
+        prev_spon = 'none'
+        # IRB
+        prev_irb = 'none'
         
         for page in range(pages):
             # 建立PdfFileWriter 物件
@@ -69,13 +72,7 @@ def split_pdf(src, dest, df):
             manu_context = cur_page_context_ary[5]
             # 檢查當前頁是否含有廠商代碼字樣
             has_manu = StringUtil.has_substr(manu_context, '廠商代碼')
-            
-            # 路徑: \\172.19.61.159\月報表明細\歷年資料\2022_02\
-            history_path = FileUtil.get_path(dest, sub_history_dir, f'{year}_{month}')
-            # 建立資料夾存放歷年資料
-            FileUtil.create_dir(history_path)
-            history_path_str = FileUtil.get_path_str(history_path)
-            
+                        
             #有廠商代碼
             if has_manu:    
                 # 廠商代碼
@@ -93,19 +90,20 @@ def split_pdf(src, dest, df):
                                 
                 # 分割後的新檔名: year_month_irb_pi.pdf
                 file_name = f'{year}_{month}_{manu}_{irb}_{pi}.pdf'
-                # 廠商分類的路徑
-                
                 
                 # 先輸出前面的頁面內容
                 if len(page_list) > 0:
+
+                    # 歷年資料依照IRB名稱分類的路徑: \\172.19.61.159\月報表明細\歷年資料\IRB編號
+                    history_path = FileUtil.get_path(dest, sub_history_dir, f'{prev_irb}')
+                    # 建立資料夾存放歷年資料
+                    FileUtil.create_dir(history_path)
+                    history_path_str = FileUtil.get_path_str(history_path)
+
                     # 輸出文件
                     for i in page_list:
-                        pdf_writer.addPage(pdf.getPage(i))                                        
-                    
-                    
-                    # new_file_dest = f'{dest}{prev_file_name}'
-                    # new_file_dest = f'{history_path_str}{prev_file_name}'
-                    
+                        pdf_writer.addPage(pdf.getPage(i))                                   
+                                                            
                     new_file_dest = FileUtil.get_path_str(
                         FileUtil.get_path(history_path_str, prev_file_name))
                     
@@ -147,18 +145,26 @@ def split_pdf(src, dest, df):
                 page_list.append(page)
                 
             prev_file_name = file_name
+            prev_irb = irb
             
             # 屬於委託中心且需月報表之案件儲存廠商名
             if sponsor is not None:
                 spon_list.append(sponsor)
-        
-        
+                    
         # 檢查頁面清單是否還有未輸出的內容
         if len(page_list) > 0:
+            
+            pdf_writer = PdfFileWriter()
+            
             for i in page_list:
                 pdf_writer.addPage(pdf.getPage(i))                                        
             
-            # new_file_dest = f'{dest}{prev_file_name}'
+            # 歷年資料依照IRB名稱分類的路徑: \\172.19.61.159\月報表明細\歷年資料\IRB編號
+            history_path = FileUtil.get_path(dest, sub_history_dir, f'{prev_irb}')
+            # 建立資料夾存放歷年資料
+            FileUtil.create_dir(history_path)
+            history_path_str = FileUtil.get_path_str(history_path)
+            
             new_file_dest = FileUtil.get_path_str(
                 FileUtil.get_path(history_path_str, prev_file_name))
             
@@ -180,7 +186,9 @@ def split_pdf(src, dest, df):
                     
         # 清空 page 列表
         page_list.clear()
-
+        
+        # 清空物件
+        pdf_writer  = None
         
     # 用來檢查檔案已確實關閉
     # print(pdf.pages[0].extract_text())
