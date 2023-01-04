@@ -8,7 +8,7 @@ import re
 
 class StringUtil:
     
-    # 根據找出符合正則規則的文字內容
+    # 找出符合正則規則的文字內容
     @staticmethod
     def regex_match(context, pattern):
         result = 'unknown'

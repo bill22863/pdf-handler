@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Spyder Editor
-
-This is a temporary script file.
-"""
 
 from win32com.client import DispatchEx
 from PyPDF2 import PdfFileWriter, PdfFileReader
@@ -12,8 +7,8 @@ class Main:
     # constructor of Main class
     def __init__(self):
         # Initialization of the Strings
-        self.excel_path = "D:/bill/python/PDF-Handler/src/11102-受試者編號2.xls"
-        self.pdf_path = "D:/bill/python/PDF-Handler/pdf/11102-受試者編號2.pdf"
+        self.excel_path = "D:/bill/python/PDF-Handler/src/11108-受試者編號.xls"
+        self.pdf_path = "D:/bill/python/PDF-Handler/pdf/11108-受試者編號.pdf"
         self.split_output_path = "split-pdf/"
 
     # function of pdf generator

@@ -7,12 +7,24 @@ Created on Tue Apr 12 15:34:37 2022
 
 from pathlib import Path
 from PyPDF2 import PdfFileWriter, PdfFileReader
+import pathlib
 
 class FileUtil:
     
     @staticmethod
     def get_path_str(p):
         return str(p)
+    
+    @staticmethod
+    def get_file_list(dir_path):
+        d = pathlib.Path(dir_path)
+        files = []
+        # iterate dir
+        for item in d.iterdir():
+            if item.is_file():
+                p = str(item.resolve())                
+                files.append(p)
+        return files        
     
     @staticmethod
     def get_path(root_path, *args):
