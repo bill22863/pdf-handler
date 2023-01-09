@@ -7,10 +7,10 @@ Created on Tue Mar 22 17:18:15 2022
 from util.file_util import FileUtil
 from util.str_util import StringUtil
 from util.excel_util import ExcelUtil
+from util.log_util import LogUtil
 from PyPDF2 import PdfFileWriter, PdfFileReader
 import pdfplumber
 from entity.db import DataBase
-
 
 # 全域變數
 input_path = "pdf/11110-受試者編號.pdf"
@@ -76,6 +76,7 @@ def split_pdf(file_list, dest, df):
             # IRB
             prev_irb = 'none'
             prev_id = 'none'
+            
             
             for page in range(pages):
                 # 建立PdfFileWriter 物件
@@ -250,27 +251,42 @@ def split_pdf(file_list, dest, df):
             # 清空物件
             pdf_writer  = None
             
+        # 刪除檔案
+        FileUtil.delete(src)
+            
         # 用來檢查檔案已確實關閉
         # print(pdf.pages[0].extract_text())
 
 
 if __name__ == '__main__':
-    
+        
     database = DataBase()
+
+    LogUtil.record(False, '開始取得所有委託廠商資料集合')    
     # 所有委託案件的廠商
     sponsors = database.query()
+    
+    LogUtil.record(False, '開始取得所有委託中心案件之IRB編號')
     ctc_case = database.query_ctc_case()    
     
     file_name_list = FileUtil.get_file_list(dir_path)
     
+    # pdf 分類
+    LogUtil.record(False, '開始 pdf 報表分類作業')
     split_pdf(file_name_list, network_drive_path, sponsors)        
     
     df = ExcelUtil.get_df(excel_path)
     
+    LogUtil.record(False, '報表分類作業結束，開始更新錯誤的門診金額')    
     # 修正門診月報表金額
     ExcelUtil.update_data(op_total_dict, df, ctc_case)    
+        
+    LogUtil.record(False, '門診金額更新完成，準備產生新報表')    
     # 匯出成新檔案
     df.to_excel(excel_output_path, sheet_name="門住診報表", index=False)
+    LogUtil.record(False, '新報表產生結束')
+    LogUtil.logger.removeHandler(LogUtil.fileHandler)
+    LogUtil.fileHandler.close()
     
     
     

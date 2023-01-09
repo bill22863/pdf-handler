@@ -6,6 +6,7 @@ Created on Thu Apr  7 13:43:21 2022
 """
 import mysql.connector
 from mysql.connector import Error
+from util.log_util import LogUtil
 import pandas as pd
 
 
@@ -41,14 +42,23 @@ class DataBase:
                         
         except Error as e:
             print(f'資料庫操作發生問題 : {e}')
+            msg = f'資料庫操作發生問題 : {e}'
+            LogUtil.record(True, msg)
+            
         except Exception as ex:
             print(f'資料查詢過程發生錯誤 : {ex}')
+            msg = f'資料查詢過程發生錯誤 : {ex}'
+            LogUtil.record(True, msg)
+            
         finally:
             if conn is not None and conn.is_connected():
                 conn.close()
                 print('資料庫連線已關閉')
-        
+                msg = '資料庫連線已關閉'
+                LogUtil.record(False, msg)
+                        
         return result_df
+    
     
     # 查詢所有委託中心的案件
     def query_ctc_case(self):
@@ -63,12 +73,20 @@ class DataBase:
                         
         except Error as e:
             print(f'資料庫操作發生問題 : {e}')
+            msg = f'資料庫操作發生問題 : {e}'
+            LogUtil.record(True, msg)            
+        
         except Exception as ex:
             print(f'資料查詢過程發生錯誤 : {ex}')
+            msg = f'資料查詢過程發生錯誤 : {ex}'
+            LogUtil.record(True, msg)
+            
         finally:
             if conn is not None and conn.is_connected():
                 conn.close()
                 print('資料庫連線已關閉')
+                msg = f'資料庫連線已關閉 '
+                LogUtil.record(False, msg)
         
         return result_df
     
