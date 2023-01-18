@@ -5,12 +5,14 @@ Created on Thu Apr  7 13:43:21 2022
 @author: Bill
 """
 import mysql.connector
+import log, logging
 from mysql.connector import Error
-from util.log_util import LogUtil
 import pandas as pd
 
 
-class DataBase:
+db_logger = logging.getLogger(__name__)
+
+class DataBase:        
     # 連線資訊
     connection_config_dict = {
         'user': 'user',
@@ -41,21 +43,21 @@ class DataBase:
                 result_df = pd.read_sql(DataBase.sql, conn)
                         
         except Error as e:
-            print(f'資料庫操作發生問題 : {e}')
-            msg = f'資料庫操作發生問題 : {e}'
-            LogUtil.record(True, msg)
+            #print(f'資料庫操作發生問題 : {e}')
+            msg = f'讀取資料庫發生問題 : {e}'
+            db_logger.error(msg)
             
         except Exception as ex:
-            print(f'資料查詢過程發生錯誤 : {ex}')
+            #print(f'資料查詢過程發生錯誤 : {ex}')
             msg = f'資料查詢過程發生錯誤 : {ex}'
-            LogUtil.record(True, msg)
+            db_logger.error(msg)
             
         finally:
             if conn is not None and conn.is_connected():
                 conn.close()
-                print('資料庫連線已關閉')
+                #print('資料庫連線已關閉')
                 msg = '資料庫連線已關閉'
-                LogUtil.record(False, msg)
+                db_logger.debug(msg)
                         
         return result_df
     
@@ -72,21 +74,21 @@ class DataBase:
                 result_df = pd.read_sql(DataBase.sql, conn)
                         
         except Error as e:
-            print(f'資料庫操作發生問題 : {e}')
-            msg = f'資料庫操作發生問題 : {e}'
-            LogUtil.record(True, msg)            
+            #print(f'資料庫操作發生問題 : {e}')
+            msg = f'讀取資料庫操作發生問題 : {e}'
+            db_logger.error(msg)            
         
         except Exception as ex:
-            print(f'資料查詢過程發生錯誤 : {ex}')
-            msg = f'資料查詢過程發生錯誤 : {ex}'
-            LogUtil.record(True, msg)
+            #print(f'資料查詢過程發生錯誤 : {ex}')
+            msg = f'查詢委託中心案件資料發生錯誤 : {ex}'
+            db_logger.error(msg)
             
         finally:
             if conn is not None and conn.is_connected():
                 conn.close()
-                print('資料庫連線已關閉')
-                msg = f'資料庫連線已關閉 '
-                LogUtil.record(False, msg)
+                #print('資料庫連線已關閉')
+                msg = '資料庫連線已關閉 '
+                db_logger.debug(msg)
         
         return result_df
     

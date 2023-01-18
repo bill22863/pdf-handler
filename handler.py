@@ -7,22 +7,26 @@ Created on Tue Mar 22 17:18:15 2022
 from util.file_util import FileUtil
 from util.str_util import StringUtil
 from util.excel_util import ExcelUtil
-from util.log_util import LogUtil
 from PyPDF2 import PdfFileWriter, PdfFileReader
-import pdfplumber
 from entity.db import DataBase
+import log
+import pdfplumber
+import configparser
 
 # 全域變數
-input_path = "pdf/11110-受試者編號.pdf"
-dir_path = r'pdf'
+#input_path = "pdf/11110-受試者編號.pdf"
+#dir_path = r'pdf'
+
 # 測試用
 # input_path = "pdf/11102-受試者編號-測試2.pdf"
 #network_drive_path = r"\\172.19.61.159\月報表明細"
-network_drive_path = r"\\172.19.61.159\月報表明細\test"
-sub_history_dir = "歷年資料"
-sub_spon_dir = "廠商分類"
-excel_path = r"excel/2022年11月門診住院費.xlsx"
-excel_output_path = r"excel/2022年11月門診住院費更新.xlsx"
+#network_drive_path = r"\\172.19.61.159\月報表明細\test"
+sub_history_dir = ""
+#sub_history_dir = "歷年資料"
+sub_spon_dir = ""
+#sub_spon_dir = "廠商分類"
+#excel_path = r"excel/2022年11月門診住院費.xlsx"
+#excel_output_path = r"excel/2022年11月門診住院費更新.xlsx"
 
 # 各IRB案件正確的門診金額
 op_total_dict = {}
@@ -259,34 +263,59 @@ def split_pdf(file_list, dest, df):
 
 
 if __name__ == '__main__':
+    
+    log.root_logger.info('開始取得設定檔參數')    
+    config = configparser.ConfigParser()
+    config.read('D:/op_report/conf/config.ini' , encoding='utf-8')
+    
+    network_drive_path = config['custom']['network_drive_path']
+    pdf_dir_path = config['custom']['pdf_dir_path']
+    
+    sub_history_dir = config['custom']['pdf_history_dir']
+    sub_spon_dir = config['custom']['pdf_spon_dir']
+    excel_dir_path = config['custom']['excel_dir_path']
+    new_report_path = config['custom']['new_report_path']
+    
         
+    log.root_logger.info('開始取得所有委託廠商資料集合')    
     database = DataBase()
-
-    LogUtil.record(False, '開始取得所有委託廠商資料集合')    
     # 所有委託案件的廠商
     sponsors = database.query()
     
-    LogUtil.record(False, '開始取得所有委託中心案件之IRB編號')
+    log.root_logger.info('開始取得所有委託中心案件之IRB編號')
     ctc_case = database.query_ctc_case()    
     
-    file_name_list = FileUtil.get_file_list(dir_path)
+    file_name_list = FileUtil.get_file_list(pdf_dir_path)
     
     # pdf 分類
-    LogUtil.record(False, '開始 pdf 報表分類作業')
+    log.root_logger.info('開始 pdf 報表分類作業')
     split_pdf(file_name_list, network_drive_path, sponsors)        
     
-    df = ExcelUtil.get_df(excel_path)
+    report_path = FileUtil.get_file_list(excel_dir_path)[0]
+    df = ExcelUtil.get_df(report_path)
     
-    LogUtil.record(False, '報表分類作業結束，開始更新錯誤的門診金額')    
+    log.root_logger.info('報表分類作業結束，開始更新錯誤的門診金額並產生新報表')
+    print('報表分類作業結束，開始更新錯誤的門診金額')
+    
     # 修正門診月報表金額
-    ExcelUtil.update_data(op_total_dict, df, ctc_case)    
+    try:
+        ExcelUtil.update_data(op_total_dict, df, ctc_case)    
+
+    except Exception as e:       
+        log.root_logger.error(f'門診月報表金額修改過程發生錯誤: {e}')
+        print('新報表產生失敗')
+    else:
+        log.root_logger.info('門診金額更新完成，準備產生新報表')    
+        # 匯出成新檔案
+        df.to_excel(new_report_path, sheet_name="門住診報表", index=False)    
+        log.root_logger.info('新報表產生結束')
+    finally:
+        log.close_log()
+    
+    log.root_logger.info('測試訊息')
         
-    LogUtil.record(False, '門診金額更新完成，準備產生新報表')    
-    # 匯出成新檔案
-    df.to_excel(excel_output_path, sheet_name="門住診報表", index=False)
-    LogUtil.record(False, '新報表產生結束')
-    LogUtil.logger.removeHandler(LogUtil.fileHandler)
-    LogUtil.fileHandler.close()
+    
+
     
     
     

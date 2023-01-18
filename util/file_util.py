@@ -7,9 +7,11 @@ Created on Tue Apr 12 15:34:37 2022
 
 from pathlib import Path
 from PyPDF2 import PdfFileWriter
-from util.log_util import LogUtil
-import pathlib
+import log, logging
 import os
+
+
+file_logger = logging.getLogger(__name__)
 
 class FileUtil:
     
@@ -36,9 +38,10 @@ class FileUtil:
             # 斜線表示連接子路徑
             path = path / p
         
-        print(f"檔案路徑: {path}")
+        #print(f"檔案路徑: {path}")
         msg = f"檔案路徑: {path}"
-        LogUtil.record(False, msg)        
+        #LogUtil.record(False, msg)        
+        file_logger.info(msg)
         return path
     
     # 建立資料夾
@@ -49,7 +52,8 @@ class FileUtil:
         except FileExistsError:
             #print(f"{path} 資料夾已建立")
             msg = f'錯誤: {path} 資料夾已存在'
-            LogUtil.record(True, msg)
+            #LogUtil.record(True, msg)
+            file_logger.error(msg)
        
         return None
     
@@ -66,11 +70,11 @@ class FileUtil:
             os.remove(src)
             #print(f'Success: {src} 刪除成功')
             msg = f'{src} 檔案刪除成功'
-            LogUtil.record(False, msg)
+            file_logger.info(msg)
             
         except OSError as e:
             #print(f'Error: {e.filename} - {e.strerror}')
             msg = f'錯誤: {e.filename} - {e.strerror}'
-            LogUtil.record(True, msg)
+            file_logger.error(msg)
             
         return None
