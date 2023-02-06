@@ -256,7 +256,7 @@ def split_pdf(file_list, dest, df):
             pdf_writer  = None
             
         # 刪除檔案
-        FileUtil.delete(src)
+        #FileUtil.delete(src)
             
         # 用來檢查檔案已確實關閉
         # print(pdf.pages[0].extract_text())
@@ -275,9 +275,9 @@ if __name__ == '__main__':
     sub_spon_dir = config['custom']['pdf_spon_dir']
     excel_dir_path = config['custom']['excel_dir_path']
     new_report_path = config['custom']['new_report_path']
-    
-        
-    log.root_logger.info('開始取得所有委託廠商資料集合')    
+            
+    log.root_logger.info('開始取得所有委託廠商的資料集合')    
+
     database = DataBase()
     # 所有委託案件的廠商
     sponsors = database.query()
@@ -291,29 +291,34 @@ if __name__ == '__main__':
     log.root_logger.info('開始 pdf 報表分類作業')
     split_pdf(file_name_list, network_drive_path, sponsors)        
     
-    report_path = FileUtil.get_file_list(excel_dir_path)[0]
-    df = ExcelUtil.get_df(report_path)
+    excel_list = FileUtil.get_file_list(excel_dir_path)
     
-    log.root_logger.info('報表分類作業結束，開始更新錯誤的門診金額並產生新報表')
-    print('報表分類作業結束，開始更新錯誤的門診金額')
-    
-    # 修正門診月報表金額
     try:
-        ExcelUtil.update_data(op_total_dict, df, ctc_case)    
-
+        if len(excel_list) > 0:
+            report_path = excel_list[0]
+            df = ExcelUtil.get_df(report_path)
+            
+            log.root_logger.info('報表分類作業結束，開始更新錯誤的門診金額並產生新報表')
+            print('報表分類作業結束，開始更新錯誤的門診金額')
+            
+            # 修正門診月報表金額            
+            ExcelUtil.update_data(op_total_dict, df, ctc_case) 
+            
+            log.root_logger.info('門診金額更新完成，準備產生新報表')    
+            # 匯出成新檔案
+            df.to_excel(new_report_path, sheet_name="門住診報表", index=False)    
+            log.root_logger.info('新報表產生結束')
+            
+        else:
+            log.root_logger.warning('找不到月報表檔案，無法更新資料')
+    except NameError as err:
+        log.root_logger.error(f'命名錯誤: {err}')            
     except Exception as e:       
         log.root_logger.error(f'門診月報表金額修改過程發生錯誤: {e}')
-        print('新報表產生失敗')
-    else:
-        log.root_logger.info('門診金額更新完成，準備產生新報表')    
-        # 匯出成新檔案
-        df.to_excel(new_report_path, sheet_name="門住診報表", index=False)    
-        log.root_logger.info('新報表產生結束')
+        print('新報表產生失敗')           
+        
     finally:
         log.close_log()
-    
-    log.root_logger.info('測試訊息')
-        
     
 
     

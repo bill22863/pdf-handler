@@ -23,11 +23,16 @@ class FileUtil:
     def get_file_list(dir_path):
         d = Path(dir_path)
         files = []
-        # iterate dir
-        for item in d.iterdir():
-            if item.is_file():
-                p = str(item.resolve())                
-                files.append(p)
+        try:            
+            # iterate dir
+            for item in d.iterdir():
+                if item.is_file():
+                    p = str(item.resolve())                
+                    files.append(p)
+        except Exception as e:
+            msg = f'檔案於{dir_path}下讀取過程發生錯誤: {e}'
+            file_logger.error(msg)
+            
         return files        
     
     @staticmethod
